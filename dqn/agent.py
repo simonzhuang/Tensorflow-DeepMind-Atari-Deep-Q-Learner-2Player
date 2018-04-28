@@ -6,6 +6,7 @@ import numpy as np
 from tqdm import tqdm
 import tensorflow as tf
 from functools import *
+import matplotlib.pyplot as plt
 
 from .base import BaseModel
 from .history import History
@@ -147,7 +148,12 @@ class Agent(BaseModel):
     if random.random() < ep:
       action = np.random.choice([0, 1, 3, 4])
     else:
+
+
       action = self.q_action.eval({self.s_t: [s_t]})[0]
+
+      self.show_saliency_maps(s_t, action)
+
 
     return action
 
@@ -435,3 +441,91 @@ class Agent(BaseModel):
     if not self.display:
       self.env.env.monitor.close()
       #gym.upload(gym_dir, writeup='https://github.com/devsisters/DQN-tensorflow', api_key='')
+
+
+
+  def saliency_map(self, X, y):
+    #print(self.q)
+    #print(self.q_action)
+
+    correct_scores = tf.gather_nd(self.q, tf.stack((tf.cast(tf.range(1), "int64"), self.q_action), axis=1))
+
+    grads = tf.gradients(correct_scores, self.s_t)
+    values = self.sess.run(grads, feed_dict={self.s_t: [X], self.q_action: [y]})[0]
+    saliency = np.max(np.absolute(values), axis=3)
+
+    return saliency
+
+  def show_saliency_maps(self, X, y):
+
+    #print(X)
+    #print(y)
+
+    #mask = np.asarray(np.arange(5))
+    #Xm = X[mask]
+    #ym = y[mask]
+
+    print(X.shape)
+    saliency = self.saliency_map(X, y)
+    for i in range(4):
+      plt.subplot(1, 5, i+1)
+      plt.imshow(X[:, :, i])
+      plt.axis('off')
+    plt.subplot(1, 5, 5)
+    plt.imshow(saliency[0], cmap=plt.cm.hot)
+    plt.axis('off')
+    plt.show()
+
+
+"""
+  def make_screen(self, lpos, rpos, ballx, bally):
+    #lpos, rpos >= 17, <= 73
+
+    
+    screen = np.loadtxt("blank.csv", delimiter=",")
+
+    screen[lpos - 3:lpos + 4, 8:11] = np.array(
+      [[118, 134, 114], [134, 160, 127], [134, 160, 127], [134, 160, 127], [134, 160, 127], [134, 160, 127],
+       [124, 144, 119]])
+    if rpos:
+      screen[rpos - 3:rpos + 4, 73:76] = np.array(
+        [[118, 134, 114], [134, 160, 127], [134, 160, 127], [134, 160, 127], [134, 160, 127], [134, 160, 127],
+         [124, 144, 119]])
+    # screen[1:3,2:3]=np.array([[256], [0]])
+
+    screen[bally - 1:bally + 2, ballx - 1:ballx + 2] = np.array([[104, 169, 111], [108, 204, 120], [96, 109, 97]])
+
+    #plt.imshow(screen)
+    #plt.show()
+
+    return screen
+
+  def sample_vis(self):
+    x = []
+    y = []
+    good_stuff = []
+    #for rpos in range(17,74,5):
+    s_t = np.array([self.make_screen(42, 30, 60, 42) for i in range(4)])
+
+    s_t = s_t.transpose([1, 2, 0])
+
+    action = self.q_action.eval({self.s_t: [s_t]})[0]
+    #good_stuff.append(action)
+
+    #x.append(74)
+    #y.append(rpos)
+
+    screen = self.make_screen(42, 30, 60, 42)
+    plt.imshow(screen)
+
+
+
+    #for i in range(len(x)):
+    #if random.getrandbits(1):
+    plt.scatter(70,30, marker="v", c='r')
+    #else:
+    #plt.scatter(x[i],y[i], marker="^", c='r')
+    plt.show()
+    #print(good_stuff)
+"""
+
